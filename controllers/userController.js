@@ -122,10 +122,156 @@ const deleteUser = (req, res) => {
   }
 };
 
+// Login endpoint
+const login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email and password are required'
+      });
+    }
+
+    const user = await User.authenticate(email, password);
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    // Create session
+    const session = await User.createSession(user.id);
+    
+    res.json({
+      success: true,
+      data: {
+        user: user.toJSON(),
+        token: session.token,
+        expiresAt: session.expiresAt
+      },
+      message: 'Login successful'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error during login',
+      error: error.message
+    });
+  }
+};
+
+// Register endpoint
+const register = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Name, email, and password are required'
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findByEmail(email);
+    if (existingUser) {
+      return res.status(409).json({
+        success: false,
+        message: 'User already exists'
+      });
+    }
+
+    // Create user
+    const user = await User.create({ name, email, password });
+    
+    // Create session
+    const session = await User.createSession(user.id);
+    
+    res.status(201).json({
+      success: true,
+      data: {
+        user: user.toJSON(),
+        token: session.token,
+        expiresAt: session.expiresAt
+      },
+      message: 'Registration successful'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error during registration',
+      error: error.message
+    });
+  }
+};
+
+// Logout endpoint
+const logout = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (token) {
+      await User.logout(token);
+    }
+    
+    res.json({
+      success: true,
+      message: 'Logout successful'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error during logout',
+      error: error.message
+    });
+  }
+};
+
+// Get current user
+const getCurrentUser = async (req, res) => {
+  try {
+    const token = req.headers.authorization?.replace('Bearer ', '');
+    
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'No token provided'
+      });
+    }
+
+    const user = await User.validateSession(token);
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid or expired token'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: user.toJSON(),
+      message: 'User retrieved successfully'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Error retrieving user',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
   createUser,
   updateUser,
-  deleteUser
+  deleteUser,
+  login,
+  register,
+  logout,
+  getCurrentUser
 }; 

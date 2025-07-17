@@ -31,6 +31,14 @@ app.get('/', (req, res) => {
   });
 });
 
+app.set('/users'), (req, res) => {
+  res.json({
+    success: true,
+    message: 'post success!', 
+    
+  })
+}
+
 // 404 handler
 app.use((req, res) => {
   res.status(404).json({
